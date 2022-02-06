@@ -58,6 +58,11 @@ bool comparitor(EmpRecord a, EmpRecord b)
 	return a.eid < b.eid;
 }
 
+bool comparitor2(tuple<int, EmpRecord>& a, tuple<int, EmpRecord>& b)
+{
+	return get<1>(a).eid < get<1>(b).eid;
+}
+
 //Sorting the buffers in main_memory based on 'eid' and storing the sorted records into a temporary file 
 //You can change return type and arguments as you want. 
 void Sort_in_Main_Memory(int cur_size){
@@ -86,6 +91,13 @@ void Write_run(string run, int cur_size)
 //
 void Merge_Runs_in_Main_Memory(int runs){
 	//cout << "Merging Not Implemented" << endl;
+
+	// Final sorted file
+	fstream output_file;
+	string filename = "EmpSorted.csv";
+	output_file.open(filename, ios::out);
+
+
 	fstream run[runs];
 	string input_file;
 	for(int i = 0; i< runs; i++)
@@ -99,18 +111,39 @@ void Merge_Runs_in_Main_Memory(int runs){
 	//Step 4. Select next block from file that had previous smallest block. How do I keep track of where the value came from?
 	//Step 5. Repeat steps 2-4 until out of blocks
 
-	//Step 1
 	int j=0;
 	int k=0;
 	int cur_size=0;
+
+	//Create tuple (run_file_index, EmpRecord)
+	vector<tuple<int, EmpRecord>> newbuffer;
+	EmpRecord  single_EmpRecord;
+	
+	//Step 1	
 	for(int i=0; i<buffer_size-1; i++)
 	{
 		if(j >= runs)
 		{
 			j = 0;
 		}
-		EmpRecord  single_EmpRecord  = Grab_Emp_Record(run[j]);
-		
+		single_EmpRecord = Grab_Emp_Record(run[j]);
+		newbuffer.push_back(make_tuple(j, single_EmpRecord));
+		j++;
+	}
+
+	bool flag = true;
+	while(flag){
+		//Step 2.
+		sort(newbuffer.begin(), newbuffer.end(), comparitor2);
+
+		//Step 3.
+		output_file << std::fixed << get<1>(newbuffer[0]).eid << ',' << get<1>(newbuffer[0]).ename << ',' << get<1>(newbuffer[0]).age << ',' << std::setprecision(0) << get<1>(newbuffer[0]).salary << "\n";	
+	
+		//Step 4.
+		EmpRecord single_EmpRecord = Grab_Emp_Record(run[get<0>(newbuffer[0])]);
+		k = 0;
+		j = get<0>(newbuffer[0]);
+		//Check if all blocks have been read into the buffer
 		while(single_EmpRecord.eid == -1 && k < runs)
 		{
 			j++;
@@ -119,58 +152,30 @@ void Merge_Runs_in_Main_Memory(int runs){
 				j = 0;
 			}
 			k++;
-			EmpRecord  single_EmpRecord  = Grab_Emp_Record(run[j]);
+			single_EmpRecord = Grab_Emp_Record(run[j]);
 		}
-		if(k >= runs)
+		if(k == runs)
 		{
-			break;
+			//All blocks have been read into the buffer
+			flag = false;
+			//Close run files
+			for(int i=0; i<runs; i++)
+			{
+				run[i].close();
+			}
 		}
-		buffers[cur_size] = single_EmpRecord;
-		cur_size++;
+		else
+		{
+			newbuffer[0] = make_tuple(j, single_EmpRecord);
+		}
 	}
-	//Step 2.
-	Sort_in_Main_Memory(cur_size);
-	
-
-
-
-
-
-
-
-	//This doesn't quite work
-	
-	fstream output_file;
-	string filename = "EmpSorted.csv";
-	output_file.open(filename, ios::out | ios::app);
-	/*
-	int cur_size=0;
-	for(int i = 0; i<buffer_size; i++)
+	cout << "All blocks read into buffer" << endl;
+	for(int i=1; i < buffer_size-1; i++)
 	{
-		//Grab next record from each run
-		for(int j = 0; j < runs; j++)
-		{
-			EmpRecord  single_EmpRecord  = Grab_Emp_Record(run[j]);
-			if(single_EmpRecord.eid != -1)
-			{
-				buffers[cur_size] = single_EmpRecord;
-				cur_size++;
-			}
-			if(i == buffer_size-1)
-			{
-				run[j].close();
-			}
-		}
-		//Sort the records
-		Sort_in_Main_Memory(cur_size);
-		//Store the sorted records into Final sorted file
-		for (int i = 0; i < cur_size; i++)
-		{
-			output_file << std::fixed << buffers[i].eid << ',' << buffers[i].ename << ',' << buffers[i].age << ',' << std::setprecision(0) << buffers[i].salary << "\n";
-		}
-		cur_size = 0;
+		output_file << std::fixed << get<1>(newbuffer[i]).eid << ',' << get<1>(newbuffer[i]).ename << ',' << get<1>(newbuffer[i]).age << ',' << std::setprecision(0) << get<1>(newbuffer[i]).salary << "\n";
 	}
-	*/
+
+
 	output_file.close();
 }
 
@@ -213,7 +218,7 @@ int main() {
 		// checks if filestream is empty
 		if (single_EmpRecord.eid == -1) {
 			flag = false;
-			Print_Buffers(cur_size); // The main_memory is not filled up but there are some leftover data that needs to be sorted.
+			// Print_Buffers(cur_size); // The main_memory is not filled up but there are some leftover data that needs to be sorted.
 			Sort_in_Main_Memory(cur_size);
 			cout << "Sorted" << endl;
 			Print_Buffers(cur_size);	
@@ -229,7 +234,7 @@ int main() {
 		else{
 			//memory is full now. Sort the blocks in Main Memory and Store it in a temporary file (runs)
 			cout << "Main Memory is full. Time to sort and store sorted blocks in a temporary file" << endl;
-			Print_Buffers(buffer_size);
+			// Print_Buffers(buffer_size);
 			//SortMain("Attributes You Want");
 			Sort_in_Main_Memory(buffer_size);
 			cout << "Sorted" << endl;
