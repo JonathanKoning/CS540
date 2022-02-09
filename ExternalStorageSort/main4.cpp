@@ -1,3 +1,7 @@
+// Jonathan Koning
+// Neha Sajnani
+
+
 /* This is a skeleton code for two-pass multi-way sorting, you can make modifications as long as you meet 
    all question requirements*/	
 //Currently this program will just load the records in the buffers (main memory) and print them when filled up.
