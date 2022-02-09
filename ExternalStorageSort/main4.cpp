@@ -62,7 +62,7 @@ bool comparitor(EmpRecord a, EmpRecord b)
 	return a.eid < b.eid;
 }
 
-bool comparitor2(tuple<int, EmpRecord>& a, tuple<int, EmpRecord>& b)
+bool comparitor2(const tuple<int, EmpRecord>& a,const tuple<int, EmpRecord>& b)
 {
 	return get<1>(a).eid < get<1>(b).eid;
 }
