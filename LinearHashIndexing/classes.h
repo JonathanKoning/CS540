@@ -54,7 +54,7 @@ private:
 			numBlocks=2; // n=2
 
 		}
-
+		cout << "h(k): " << record.id % int(pow(2.0,16.0)) << endl;
 		// Add record to the index in the correct block, creating overflow block if necessary
 		// ONLY keep up to 3 blocks + directory of the hash index in main memory
 
@@ -101,6 +101,7 @@ public:
 				// LinearHashIndex emp_index("EmployeeIndex");
 				Record emp(newemp);
 				emp.print();
+				insertRecord(emp);
 
 			} else {
 				eof = false;
