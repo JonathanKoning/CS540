@@ -43,7 +43,8 @@ private:
 						// This could be the page index
 
 	int numRecords; 	// Records in index. Number of records in the page
-	int nextFreePage; 	// Next page to write to. This is what determines what to mod against. 
+	int nextFreePage; 	// Next page to write to. This is the index that is stored in pageDirectory
+						// This is what determines what to mod against. 
 	
 	//TODO
 	// bucket = block
@@ -66,21 +67,52 @@ private:
 	void insertRecord(Record record) {
 		// No records written to index yet
 		if (numRecords == 0) {
+			nextFreePage = 0;
 			fstream index_file1;
 			index_file1.open(fName, ios::out);
 			index_file1.close();
-			FILE* index_file = fopen(fName.c_str(), "w+");
+			//FILE* index_file = fopen(fName.c_str(), "w+");
 			// Initialize index with first blocks (start with 2)
 			numBlocks=2; // n=2
-			i=2;
-			pageDirectory.push_back(fseek(index_file, 0*PAGE_SIZE, SEEK_SET));
-			pageDirectory.push_back(fseek(index_file, 1*PAGE_SIZE, SEEK_SET));
-			fclose(index_file);
+			i=1;
+			pageDirectory.push_back(nextFreePage);
+			nextFreePage++;
+			pageDirectory.push_back(nextFreePage);
+			nextFreePage++;
+			//pageDirectory.push_back(fseek(index_file, 0*PAGE_SIZE, SEEK_SET));
+			//pageDirectory.push_back(fseek(index_file, 1*PAGE_SIZE, SEEK_SET));
+			//fclose(index_file);
 
-			cout << pageDirectory[0] << endl;
-			cout << pageDirectory[1] << endl;
+			//cout << pageDirectory[0] << endl;
+			//cout << pageDirectory[1] << endl;
 		}
 
+		FILE* index_file = fopen(fName.c_str(), "w+");
+		int Page_index = (pageDirectory[(record.id % int(pow(2.0, 16.0))) % int(pow(2,i))])*PAGE_SIZE;
+		cout << Page_index << endl;
+		string srecord = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id);
+		cout << srecord.c_str() << endl;
+		fseek(index_file, Page_index, SEEK_SET);
+		fputs(srecord.c_str(), index_file);
+		fclose(index_file);
+		numRecords++;
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		// The key, k, is the record.id
 		// Hash function h(k) maps a key, k, to {0, ..., n-1}
 		// Block h(k) stores the records with key k.
