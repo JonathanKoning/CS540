@@ -23,7 +23,7 @@ int main(int argc, char* const argv[]) {
     emp_index.createFromFile("Employee.csv");
     
     // Loop to lookup IDs until user is ready to quit
-    
+    cout << sizeof(double) << endl;
 
     return 0;
 }
