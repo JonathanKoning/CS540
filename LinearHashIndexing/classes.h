@@ -6,6 +6,11 @@
 #include <bitset>
 using namespace std;
 
+class slot{
+	public:
+	vector<int> slots;
+};
+
 class Record {
 public:
 	int id, manager_id;
@@ -42,9 +47,10 @@ private:
 	int i;				// number of bits required to address n blocks. If we are using 2^16 for the hash, why do we need i?
 						// This could be the page index
 
-	int numRecords; 	// Records in index. Number of records in the page
+	int numRecords; 	// Records in index.
 	int nextFreePage; 	// Next page to write to. This is the index that is stored in pageDirectory
-						// This is what determines what to mod against. 
+						
+	vector<vector<int>> pageslots; // This stores the number of records and bits in each page
 	
 	//TODO
 	// bucket = block
@@ -52,7 +58,7 @@ private:
 	// n = number of buckets
 	// split policy = greater than 70% capacity
 	// bucket capacity = PAGE_SIZE
-	//1 record = 18 to 716 Bytes (id, name, bio, manager-id) = (int, string, string, int) = (8 bytes, 1-200 bytes, 1-500 bytes, 8 bytes)
+	// 1 record = 18 to 716 Bytes (id, name, bio, manager-id) = (int, string, string, int) = (8 bytes, 1-200 bytes, 1-500 bytes, 8 bytes)
 	
 	 
 
@@ -76,26 +82,73 @@ private:
 			numBlocks=2; // n=2
 			i=1;
 			pageDirectory.push_back(nextFreePage);
+			pageslots.push_back({0,0});
 			nextFreePage++;
+
 			pageDirectory.push_back(nextFreePage);
 			nextFreePage++;
-			//pageDirectory.push_back(fseek(index_file, 0*PAGE_SIZE, SEEK_SET));
-			//pageDirectory.push_back(fseek(index_file, 1*PAGE_SIZE, SEEK_SET));
-			//fclose(index_file);
-
-			//cout << pageDirectory[0] << endl;
-			//cout << pageDirectory[1] << endl;
+			pageslots.push_back({0,0});
 		}
 
-		FILE* index_file = fopen(fName.c_str(), "w+");
-		int Page_index = (pageDirectory[(record.id % int(pow(2.0, 16.0))) % int(pow(2,i))])*PAGE_SIZE;
-		cout << Page_index << endl;
-		string srecord = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id);
-		cout << srecord.c_str() << endl;
-		fseek(index_file, Page_index, SEEK_SET);
+		FILE* index_file = fopen(fName.c_str(), "a+");
+		int hx = (record.id % int(pow(2.0, 16.0))) % int(pow(2,i));
+		int Page_index = pageDirectory[hx];
+		// cout << Page_index << endl;
+		string srecord = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id) + "$";
+		// cout << srecord << endl;
+		int pageoffset = Page_index*PAGE_SIZE + pageslots[hx][1];
+
+		//Place record into correct block
+		fseek(index_file, pageoffset, SEEK_SET);
 		fputs(srecord.c_str(), index_file);
 		fclose(index_file);
-		numRecords++;
+		pageslots[hx] = {pageslots[hx][0]+1, (pageslots[hx][1] + (sizeof(srecord.c_str())*srecord.length()))};
+		// cout << "pageslots[" << hx << "]: " << pageslots[hx][1] << endl;
+		numRecords+=sizeof(srecord.c_str())*srecord.length();
+		cout << "numRecords: " << numRecords << endl;
+		float capacity = numBlocks*PAGE_SIZE;
+		float perfull = numRecords/capacity;
+		cout << perfull << endl;
+		// if number of records is > 70% capacity, then:
+		// split block
+		// increment number of blocks
+		// if number of blocks is now odd, increase i
+		if (perfull > 0.70)
+		{
+			string line, emp, word;
+			cout << "Split" << endl;
+			numBlocks++;
+			if(numBlocks%2 == 1)
+			{
+				i++;
+			}
+			pageDirectory.push_back(nextFreePage);
+			nextFreePage++;
+
+			//Loop through each block
+			FILE* index_file = fopen(fName.c_str(), "r");
+			
+			for(int j=0; j<numBlocks-1; j++)
+			{
+				pageoffset = j*PAGE_SIZE;
+				char buffer[pageslots[j][1]];
+				// string buffer;
+				// Read in one block
+
+				fread(buffer, pageslots[j][1], 1, index_file);
+
+				cout << buffer << endl;
+
+				//Loop through each record
+				// for(int k=0; k < pageslots[j][0]; k++)
+				// {
+					
+				// }
+			}
+
+
+
+		}
 		
 		
 		
@@ -117,18 +170,7 @@ private:
 		// Hash function h(k) maps a key, k, to {0, ..., n-1}
 		// Block h(k) stores the records with key k.
 
-		//Blocksize = PAGE_SIZE = 4096 Bytes
-		// long unsigned int s = 3;
-		int hk = record.id % int(pow(2.0,16.0));
-		std::bitset<32> x(hk);
-		// cout << "h(k): " << hk << endl;
-		// cout << "bitset: " << x << endl;
-		// cout << "hk & 1: " << (bitset<const s> (hk&3)) << endl;
-		// cout << "bitset[32]: " <<  << endl;
-		// cout << "hk % 2^i: " << (hk% (int)pow(2, i)) << endl;
-		// cout << "2^16: " << pow(2, 16) << endl;
-		// cout << "msb: " << (((1 << 3)-1)&(hk >> (1-1))) << endl;
-		// cout << "msb: " << (1 << ((int)(log2(record.id % int(pow(2.0,16.0)))))) << endl;
+
 		// Add record to the index in the correct block, creating overflow block if necessary
 		// ONLY keep up to 3 blocks + directory of the hash index in main memory
 
@@ -178,6 +220,7 @@ public:
 				// emp.print();
 				//Insert record into the hash
 				insertRecord(emp);
+				// delete(&emp);
 
 			} else {
 				eof = false;
