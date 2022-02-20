@@ -47,29 +47,23 @@ private:
     int nextFreePage; // Next page to write to
 	int block_size;
 	string fName;
-	void writeBlock(FILE* temp_file, Block block, int blocknumber)
+	void writeBlock(FILE* temp_file, Block* block, int blocknumber)
 	{
 		cout << "writeBlock: " << blocknumber << endl;
-		// char buff_arr[block.buffer.length()+1];
-		// for(int i=0; i<sizeof(buff_arr); i++)
-		// {
-		// 	buff_arr[i] = block.buffer[i];
-		// 	cout << "buff_arr[" << i << "]: " << buff_arr[i] << endl;
-		// }
-		// strcpy(buff_arr, (block.buffer).c_str());
+		
 		// Write overflow
 		fseek(temp_file, blocknumber*4096, SEEK_SET);
 		cout << ftell(temp_file) << endl;
-		fputs(block.overflow.c_str(), temp_file);
+		fputs(block->overflow.c_str(), temp_file);
 		cout << ftell(temp_file) << endl;
 		
 		// Write buffer
 		fseek(temp_file, ((blocknumber*4096)+4), SEEK_SET);
 		cout << "Move to start of buffer: " << ftell(temp_file) << endl;
 		// int puts = fputs(buff_arr, temp_file);
-		int puts = fputs(block.buffer.c_str(), temp_file);
+		int puts = fputs(block->buffer.c_str(), temp_file);
 		// cout << "buffer: " << block.buffer << endl;
-		cout << "buffer.c_str: " << (block.buffer).c_str() << endl;
+		// cout << "buffer.c_str: " << (block->buffer).c_str() << endl;
 
 		cout << "puts: " << puts << endl;
 		cout << "Buffer written: " << ftell(temp_file) << endl;
@@ -77,7 +71,7 @@ private:
 		// Write offset
 		fseek(temp_file, ((blocknumber*4096)+4092), SEEK_SET);
 		cout << "Move to start of offset: " << ftell(temp_file) << endl;
-		fputs(block.offset.c_str(), temp_file);
+		fputs(block->offset.c_str(), temp_file);
 		// fputs("0000", temp_file);
 		cout << "offset written: " << ftell(temp_file) << endl;
 	}
@@ -97,34 +91,33 @@ private:
 		//Get overflow buffer
 		fseek(index_file, blocknumber*4096, SEEK_SET);
 		fread(&overflow[0], 1, 4, index_file);
-		cout << "overflow: " << overflow << endl;
+		// cout << "overflow: " << overflow << endl;
 
 		//Get buffer size
 		fseek(index_file, (blocknumber*4096)+4092, SEEK_SET);
 		fread(&offset[0], 1, 4, index_file);
-		cout << "offset: " << offset << endl;
+		// cout << "offset: " << offset << endl;
 		buffersize = stoi(offset);
-		cout << "buffersize: " << buffersize << endl;
+		// cout << "buffersize: " << buffersize << endl;
 		
 		//Get buffer
 		newblock.buffer.resize(buffersize-4);
 		
 		fseek(index_file, (blocknumber*4096)+4, SEEK_SET);
 		fread(&newblock.buffer[0], 1, buffersize, index_file);
-		cout << "buffer: " << buffer[buffersize-5] << endl;
+		// cout << "buffer: " << buffer[buffersize-5] << endl;
 
 		// struct Block newblock;
-		cout << "newblock allocated" << endl;
+		// cout << "newblock allocated" << endl;
 		newblock.overflow = overflow;
-		cout << "newblock overflow set" << endl;
+		// cout << "newblock overflow set" << endl;
 		// newblock.buffer = buffer;
-		cout << "newblock buffer set" << endl;
+		// cout << "newblock buffer set" << endl;
 		newblock.offset = offset;
-		cout << "newblock offset set" << endl;
+		// cout << "newblock offset set" << endl;
 
-		cout << "returning new block" << endl;
+		// cout << "returning new block" << endl;
 		return newblock;
-
 	}
 
 	int h(int id)
@@ -136,10 +129,10 @@ private:
 
     // Insert new record into index
     void insertRecord(Record record) {
-		
 		FILE* index_file; 
 		FILE* temp_file;
 		struct Block newblock;
+		struct Block oldblock;
 		newblock.overflow = "0000";
 		newblock.offset = "0004";
         // No records written to index yet
@@ -149,17 +142,21 @@ private:
 			i = 1;
 			numBlocks = 2;
 			nextFreePage = 2;
-			// struct Block newblock;
-			// newblock.overflow = "0000";
-			// newblock.offset = "0004";
 
 			index_file = fopen(fName.c_str(), "w+");
 			//Write 2 empty blocks to the file
-			writeBlock(index_file, newblock, 0);
+			writeBlock(index_file, &newblock, 0);
 			pageDirectory.push_back(0);
-			writeBlock(index_file, newblock, 1);
+			writeBlock(index_file, &newblock, 1);
 			pageDirectory.push_back(1);
-			fclose(index_file);
+			if(fclose(index_file) == 0)
+			{
+				cout << "index closed" << endl;
+			}
+			else
+			{
+				cout << "index failed to close" << endl;
+			}
         }
 		cout << "//////////////////Insert New Record////////////////" << endl;
 		// Add record to the index in the correct block, creating overflow block if necessary
@@ -169,15 +166,17 @@ private:
 		int overflowblock = 0;
 		for(int j=0; j<nextFreePage; j++)
 		{
+			cout << "top of loop" << endl;
 			
-			struct Block oldblock = readBlock(index_file, j);
+			oldblock = readBlock(index_file, j);
 			cout << "block read in" << endl;
+			// cout << oldblock.buffer << endl;
 			if((j == pageDirectory[h(record.id)]) || (OFBlock && j == overflowblock))
 			{
 				cout << "new record goes into this page" << endl;
 				//Convert record into string to be added to buffer
 				string newbuffer = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id) + "$";
-				
+				cout << "total buffer length: " << stoi(oldblock.offset)+newbuffer.length() << endl;
 				//Check if new record will fit into the block
 				if(stoi(oldblock.offset)+newbuffer.length() > 4092)
 				{
@@ -209,7 +208,7 @@ private:
 							oldblock.overflow = to_string(nextFreePage);
 						}
 						cout << "Write overflowblock" << endl;
-						writeBlock(index_file, newblock, nextFreePage);
+						writeBlock(index_file, &newblock, nextFreePage);
 						nextFreePage++;
 					}
 				}
@@ -239,13 +238,38 @@ private:
 				}
 			}
 			cout << "writing block" << endl;
-			writeBlock(temp_file, oldblock, j);
+			writeBlock(temp_file, &oldblock, j);
+			cout << "writing finished" << endl;
 		}
-		fclose(temp_file);
-		fclose(index_file);
+		cout << "All blocks updated" << endl;
+		cout << "attempting to close index file" << endl;
+		if(fclose(index_file) == 0)
+		{
+			cout << "index closed" << endl;
+		}
+		else
+		{
+			cout << "index failed to close" << endl;
+		}
+		
+		
 		remove(fName.c_str());
+		cout << "EmployeeIndex removed" << endl;
+		
+		cout << "attempting to close temp file" << endl;
+		if(fclose(temp_file) == 0)
+		{
+			cout << "temp closed" << endl;
+		}
+		else
+		{
+			cout << "temp failed to close" << endl;
+		}
+		cout << "both files closed" << endl;
 		rename("temp", fName.c_str());
+		cout << "temp renamed to EmployeeIndex" << endl;
 		numRecords++;
+		cout << "number of records updated" << endl;
 			
 
 
@@ -271,7 +295,7 @@ public:
 		string line, word;
 		// Record  emp;
 		bool eof = true;
-		for (int i=0; i<10; i++)
+		for (int i=0; i<13; i++)
 		{
 			if (getline(input_file, line, '\n')) {
 				vector<std::string> newemp;
