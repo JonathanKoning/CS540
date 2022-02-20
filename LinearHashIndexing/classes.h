@@ -6,9 +6,9 @@
 #include <bitset>
 using namespace std;
 
-class slot{
+class Block{
 	public:
-	vector<int> slots;
+	char[4096]; 
 };
 
 class Record {
@@ -68,7 +68,7 @@ private:
 					// Each page (block) can hold between 5 and 227 records, 4096/716 and 4096/18
 	string fName;	// This is the output file
 	/////////////////////////////////////////////////////////////////////
-
+	float capacity;
     // Insert new record into index
 	void insertRecord(Record record) {
 		// No records written to index yet
@@ -77,78 +77,173 @@ private:
 			fstream index_file1;
 			index_file1.open(fName, ios::out);
 			index_file1.close();
-			//FILE* index_file = fopen(fName.c_str(), "w+");
+			
+
 			// Initialize index with first blocks (start with 2)
 			numBlocks=2; // n=2
 			i=1;
 			pageDirectory.push_back(nextFreePage);
 			pageslots.push_back({0,0});
 			nextFreePage++;
-
+			
+			FILE* index_file = fopen(fName.c_str(), "w+");
+			// fseek(index_file, pageoffset, SEEK_SET);
+			
+			fputs("0000", index_file);
+			fseek(index_file, 4092, SEEK_SET);
+			fputs("0000", index_file);
 			pageDirectory.push_back(nextFreePage);
 			nextFreePage++;
 			pageslots.push_back({0,0});
+			fseek(index_file, 4096, SEEK_SET);
+			fputs("0000", index_file);
+			fseek(index_file, (2*4096)-4, SEEK_SET);
+			fputs("0000", index_file);
+			fclose(index_file);
 		}
+		numRecords++;
+		// capacity = numBlocks*PAGE_SIZE;
 
-		FILE* index_file = fopen(fName.c_str(), "a+");
-		int hx = (record.id % int(pow(2.0, 16.0))) % int(pow(2,i));
-		int Page_index = pageDirectory[hx];
-		// cout << Page_index << endl;
-		string srecord = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id) + "$";
-		// cout << srecord << endl;
-		int pageoffset = Page_index*PAGE_SIZE + pageslots[hx][1];
+		// FILE* index_file = fopen(fName.c_str(), "a+");
+		// int hx = (record.id % int(pow(2.0, 16.0))) % int(pow(2,i));
+		// int Page_index = pageDirectory[hx];
+		// string srecord = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id) + "$";
+		
+		// cout << "hx: " << hx << endl; 
 
-		//Place record into correct block
-		fseek(index_file, pageoffset, SEEK_SET);
-		fputs(srecord.c_str(), index_file);
-		fclose(index_file);
-		pageslots[hx] = {pageslots[hx][0]+1, (pageslots[hx][1] + (sizeof(srecord.c_str())*srecord.length()))};
-		// cout << "pageslots[" << hx << "]: " << pageslots[hx][1] << endl;
-		numRecords+=sizeof(srecord.c_str())*srecord.length();
-		cout << "numRecords: " << numRecords << endl;
-		float capacity = numBlocks*PAGE_SIZE;
-		float perfull = numRecords/capacity;
-		cout << perfull << endl;
+		// // Step 1: Check if new record can fit in block
+		// // if((pageslots[hx][1] + sizeof(srecord.c_str()) *srecord.length()) > PAGE_SIZE)
+		// // {
+		// // 	cout << "Overflow block needed" << endl;
+		// // }
+
+																			
+		// // Step 2: Insert record into correct block
+		// int pageoffset = Page_index*PAGE_SIZE + pageslots[hx][1];
+
+		// //Place record into correct block
+		// fseek(index_file, pageoffset, SEEK_SET);
+		// fputs(srecord.c_str(), index_file);
+		// fclose(index_file);
+		// pageslots[hx] = {pageslots[hx][0]+1, (pageslots[hx][1] + (sizeof(srecord.c_str())*srecord.length()))};
+		
+		
+
+		// // Step 3: Update number of records, level of capacity
+		// numRecords+=sizeof(srecord.c_str())*srecord.length();
+		// cout << "numRecords: " << numRecords << endl;
+		
+		// if(pageslots[hx][1] > PAGE_SIZE)
+		// {
+		// 	cout << "Overflow block needed" << endl;
+		// }
+
+		// float perfull = numRecords/capacity;
+		// cout << perfull << endl;
+
+		// Step 4:
 		// if number of records is > 70% capacity, then:
 		// split block
 		// increment number of blocks
 		// if number of blocks is now odd, increase i
-		if (perfull > 0.70)
-		{
-			string line, emp, word;
-			cout << "Split" << endl;
-			numBlocks++;
-			if(numBlocks%2 == 1)
-			{
-				i++;
-			}
-			pageDirectory.push_back(nextFreePage);
-			nextFreePage++;
-
-			//Loop through each block
-			FILE* index_file = fopen(fName.c_str(), "r");
+		// if (perfull > 0.70)
+		// {
+		// 	string line, emp, word;
+		// 	cout << "Split" << endl;
+		// 	// Increment number of blocks
+		// 	numBlocks++;
+		
+		// 	// if number of blocks is now odd, increase i
+		// 	if(numBlocks%2 == 1)
+		// 	{
+		// 		i++;
+		// 	}
+		// 	numBlocks++;
+		// 	//add new page
+		// 	pageDirectory.push_back(nextFreePage);
+		// 	nextFreePage++;
+		// 	pageslots.push_back({0,0});
+		// 	pageDirectory.push_back(nextFreePage);
+		// 	nextFreePage++;
+		// 	pageslots.push_back({0,0});
 			
-			for(int j=0; j<numBlocks-1; j++)
-			{
-				pageoffset = j*PAGE_SIZE;
-				char buffer[pageslots[j][1]];
-				// string buffer;
-				// Read in one block
+		// 	//Loop through each block
+		// 	FILE* index_file = fopen(fName.c_str(), "ra");
+		// 	string rid;
+		// 	string rec;
+		// 	char ch;
+		// 	bool foundrid;
+		// 	for(int j=0; j<numBlocks-1; j++)
+		// 	{
+		// 		pageoffset = j*PAGE_SIZE;
+		// 		char buffer[pageslots[j][1]];
+		// 		// string buffer;
+		// 		// Read in one block
 
-				fread(buffer, pageslots[j][1], 1, index_file);
-
-				cout << buffer << endl;
-
-				//Loop through each record
-				// for(int k=0; k < pageslots[j][0]; k++)
-				// {
+		// 		fread(buffer, pageslots[j][1], 1, index_file);
+				
+		// 		ch = '';
+		// 		foundrid = false;
+		// 		rid = '';
+		// 		rec = '';
+		// 		for(int k=0; k < pageslots[j][1]; k++)
+		// 		{
 					
-				// }
-			}
+		// 			ch = buffer[k];
+					
+		// 			// Found the id
+		// 			if(ch == ",")
+		// 			{
+		// 				foundrid = true;
+		// 			}
+		// 			// Read entire record
+		// 			else if(ch == "$")
+		// 			{
+		// 				rec.push_back(ch);
+		// 				foundrid = false;
 
+		// 				//find where the record belongs
+		// 				hx = (stoi(rid) % int(pow(2.0, 16.0))) % int(pow(2,i));
+						
+		// 				//if the record is does not belong in the current block
+		// 				if(hx != k)
+		// 				{
+		// 					// Move record to new block
+		// 					Page_index = pageDirectory[hx];
+		// 					pageoffset = Page_index*PAGE_SIZE + pageslots[hx][1];
+		// 					fseek(index_file, pageoffset, SEEK_SET);
+		// 					fputs((rid + rec).c_str(), index_file);
+		// 					pageslots[hx] = {pageslots[hx][0]+1, (pageslots[hx][1] + (sizeof((rid + rec).c_str())*(rid + rec).length()))};
 
+		// 					//Remove record from original block
+		// 					pageoffset = j*PAGE_SIZE + pageslots[hx][1];
+		// 					fseek(index_file, pageoffset, SEEK_SET);
+		// 					fputs((rid + rec).c_str(), index_file);
 
-		}
+		// 				}
+		// 				// Page_index = pageDirectory[hx];
+		// 				rec = '';
+		// 				rid = '';
+		// 			}
+		// 			if(foundrid == false)
+		// 			{
+		// 				rid.push_back(ch);
+		// 			}
+		// 			else
+		// 			{
+		// 				rec.push_back(ch);
+		// 			}
+		// 		}
+				
+		// 		cout << buffer << endl;
+
+		// 		//Loop through each record
+		// 		// for(int k=0; k < pageslots[j][0]; k++)
+		// 		// {
+					
+		// 		// }
+		// 	}
+		// }
 		
 		
 		

@@ -12,7 +12,7 @@ Skeleton code for linear hash indexing
 #include <sstream>
 #include <stdexcept>
 #include <cmath>
-#include "classes.h"
+#include "classes2.h"
 using namespace std;
 
 
@@ -23,7 +23,7 @@ int main(int argc, char* const argv[]) {
     emp_index.createFromFile("Employee.csv");
     
     // Loop to lookup IDs until user is ready to quit
-    cout << sizeof(double) << endl;
+    // cout << sizeof(double) << endl;
 
     return 0;
 }
