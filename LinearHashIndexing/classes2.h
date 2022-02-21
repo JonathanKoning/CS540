@@ -133,6 +133,7 @@ private:
 		FILE* temp_file;
 		struct Block newblock;
 		struct Block oldblock;
+		
 		newblock.overflow = "0000";
 		newblock.offset = "0004";
         // No records written to index yet
@@ -177,8 +178,9 @@ private:
 				//Convert record into string to be added to buffer
 				string newbuffer = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id) + "$";
 				cout << "total buffer length: " << stoi(oldblock.offset)+newbuffer.length() << endl;
+				numRecords += newbuffer.length();
 				//Check if new record will fit into the block
-				if(stoi(oldblock.offset)+newbuffer.length() > 4092)
+				if(stoi(oldblock.offset)+newbuffer.length() > 4088)
 				{
 					cout << "Overflow block needed" << endl;
 					//Check if current block has overflow block
@@ -268,13 +270,219 @@ private:
 		cout << "both files closed" << endl;
 		rename("temp", fName.c_str());
 		cout << "temp renamed to EmployeeIndex" << endl;
-		numRecords++;
+		// numRecords++; //This need to be changed to be the number of bits used
 		cout << "number of records updated" << endl;
 			
 
 
 
 		// Take neccessary steps if capacity is reached
+		float capacity = numRecords/(numBlocks*4096);
+
+		if(capacity > 0.7)
+		{
+			struct Block splitblock;
+			FILE* new_index_file = fopen("newIndex", "w+");
+			index_file = fopen(fName.c_str(), "r+");
+			temp_file = fopen("temp", "w+");
+			writeBlock(index_file, &newblock, nextFreePage);
+			nextFreePage++;
+			numBlocks++;
+			if(numBlocks%((int)pow(2,i))==1)
+			{
+				i++;
+			}
+
+			//Intitiallize temp file
+			for(int j=0; j<nextFreePage; j++)
+			{
+				writeBlock(new_index_file, &newblock, nextFreePage);
+			}
+			if(fclose(new_index_file) == 0)
+			{
+				cout << "index closed" << endl;
+			}
+			else
+			{
+				cout << "index failed to close" << endl;
+			}
+
+			
+			//Read each block
+			string rec;
+			string word;
+			for(int j=0; j<nextFreePage; j++)
+			{
+				oldblock = readBlock(index_file, j);
+				//Read each record
+				stringstream buff(oldblock.buffer);
+				while(getline(buff, rec, '$'))
+				{
+					vector<std::string> newemp;
+					stringstream s(rec);
+					//Get id
+					getline(s, word,',');
+					newemp.push_back(word);
+					//get name
+					getline(s, word,',');
+					newemp.push_back(word);
+					//get bio
+					getline(s, word, ',');
+					newemp.push_back(word);
+					//get manager_id
+					getline(s, word, ',');
+					newemp.push_back(word);
+
+					Record emp(newemp);
+
+					new_index_file = fopen("newIndex", "r+");
+					temp_file = fopen("temp", "w+");
+					OFBlock = false;
+					overflowblock = 0;
+					// new_index_file = fopen("newIndex", "w+");
+
+					//Insert new record into temp_file
+					for(int j=0; j<nextFreePage; j++)
+					{
+						cout << "top of loop" << endl;
+
+						splitblock = readBlock(new_index_file, j);
+						cout << "block read in" << endl;
+						// cout << oldblock.buffer << endl;
+						if((j == pageDirectory[h(emp.id)]) || (OFBlock && j == overflowblock)) // Does not yet account for bit flip
+						{
+							cout << "new record goes into this page" << endl;
+							//Convert record into string to be added to buffer
+							string newbuffer = to_string(emp.id) + ',' + emp.name + ',' + emp.bio + ',' + to_string(emp.manager_id) + "$";
+							cout << "total buffer length: " << stoi(splitblock.offset)+newbuffer.length() << endl;
+							// numRecords += newbuffer.length();
+							//Check if new record will fit into the block
+							if(stoi(splitblock.offset)+newbuffer.length() > 4088)
+							{
+								cout << "Overflow block needed" << endl;
+								//Check if current block has overflow block
+								if(splitblock.overflow != "0000")
+								{
+									cout << "block has overflowblock" << endl;
+									OFBlock = true;
+									overflowblock = stoi(splitblock.overflow);
+								}
+								else //Create an overflow block
+								{
+									cout << "create overflowblock" << endl;
+									if(nextFreePage < 10)
+									{
+										splitblock.overflow = "000" + to_string(nextFreePage);
+									}
+									else if(nextFreePage < 100)
+									{
+										splitblock.overflow = "00" + to_string(nextFreePage);
+									}
+									else if(nextFreePage < 1000)
+									{
+										splitblock.overflow = "0" + to_string(nextFreePage);
+									}
+									else
+									{
+										splitblock.overflow = to_string(nextFreePage);
+									}
+									cout << "Write overflowblock" << endl;
+									writeBlock(index_file, &newblock, nextFreePage);
+									nextFreePage++;
+								}
+							}
+							else
+							{
+								splitblock.buffer += newbuffer;
+								int newoffset = splitblock.buffer.length()+4;
+								if(newoffset < 10)
+								{
+									splitblock.offset = "000" + to_string(newoffset);
+								}
+								else if(newoffset < 100)
+								{
+									splitblock.offset = "00" + to_string(newoffset);
+								}
+								else if(newoffset < 1000)
+								{
+									splitblock.offset = "0" + to_string(newoffset);
+									cout << newoffset << endl;
+									cout << to_string(newoffset) << endl;
+									cout << splitblock.offset << endl;
+								}
+								else
+								{
+									splitblock.offset = to_string(newoffset);
+								}
+							}
+						}
+						cout << "writing block" << endl;
+						writeBlock(temp_file, &splitblock, j);
+						cout << "writing finished" << endl;
+					}
+
+					cout << "attempting to close new_index_file" << endl;
+					if(fclose(new_index_file) == 0)
+					{
+						cout << "new index closed" << endl;
+					}
+					else
+					{
+						cout << "new index failed to close" << endl;
+					}
+
+
+					remove("newIndex");
+					cout << "new index removed" << endl;
+
+					cout << "attempting to close temp file" << endl;
+					if(fclose(temp_file) == 0)
+					{
+						cout << "temp closed" << endl;
+					}
+					else
+					{
+						cout << "temp failed to close" << endl;
+					}
+					cout << "both files closed" << endl;
+					rename("temp", "newIndex");
+					cout << "temp renamed to newIndex" << endl;
+					// numRecords++; //This need to be changed to be the number of bits used
+					cout << "number of records updated" << endl;
+				}
+			}
+			cout << "All blocks updated" << endl;
+			cout << "attempting to close index file" << endl;
+			if(fclose(index_file) == 0)
+			{
+				cout << "index closed" << endl;
+			}
+			else
+			{
+				cout << "index failed to close" << endl;
+			}
+
+
+			remove(fName.c_str());
+			cout << "EmployeeIndex removed" << endl;
+
+			// cout << "attempting to close temp file" << endl;
+			// if(fclose(temp_file) == 0)
+			// {
+			// 	cout << "temp closed" << endl;
+			// }
+			// else
+			// {
+			// 	cout << "temp failed to close" << endl;
+			// }
+			// cout << "both files closed" << endl;
+			rename("newIndex", fName.c_str());
+			cout << "temp renamed to EmployeeIndex" << endl;
+			// numRecords++; //This need to be changed to be the number of bits used
+			cout << "number of records updated" << endl;
+
+		}
+
 		
     }
 
