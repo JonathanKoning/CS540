@@ -80,7 +80,9 @@ private:
 	Block readBlock(FILE* index_file, int blocknumber)
 	{
 		cout << "readBlock: " << blocknumber << endl;
-		struct Block newblock;
+		Block newblock;
+		cout << "newblock initiallized" << endl;
+		
 		string overflow;
 		string buffer;
 		string offset;
@@ -105,18 +107,21 @@ private:
 		
 		fseek(index_file, (blocknumber*4096)+4, SEEK_SET);
 		fread(&newblock.buffer[0], 1, buffersize, index_file);
+		cout << "newblock buffer read in" << endl;
 		// cout << "buffer: " << buffer[buffersize-5] << endl;
 
 		// struct Block newblock;
 		// cout << "newblock allocated" << endl;
 		newblock.overflow = overflow;
+		cout << "newblock overflow allocated" << endl;
 		// cout << "newblock overflow set" << endl;
 		// newblock.buffer = buffer;
 		// cout << "newblock buffer set" << endl;
 		newblock.offset = offset;
+		cout << "newblock offset allocated" << endl;
 		// cout << "newblock offset set" << endl;
 
-		// cout << "returning new block" << endl;
+		cout << "returning new block" << endl;
 		return newblock;
 	}
 
@@ -131,8 +136,8 @@ private:
     void insertRecord(Record record) {
 		FILE* index_file; 
 		FILE* temp_file;
-		struct Block newblock;
-		struct Block oldblock;
+		Block newblock;
+		Block oldblock;
 		
 		newblock.overflow = "0000";
 		newblock.offset = "0004";
@@ -165,6 +170,12 @@ private:
 		temp_file = fopen("temp", "w+");
 		bool OFBlock = false;
 		int overflowblock = 0;
+		int key = record.id;
+		string newbuffer;
+		if(h(key) >= numBlocks)
+		{
+			key = key - pow(2, i-1);
+		}
 		for(int j=0; j<nextFreePage; j++)
 		{
 			cout << "top of loop" << endl;
@@ -172,11 +183,16 @@ private:
 			oldblock = readBlock(index_file, j);
 			cout << "block read in" << endl;
 			// cout << oldblock.buffer << endl;
-			if((j == pageDirectory[h(record.id)]) || (OFBlock && j == overflowblock))
+
+			if(h(record.id) > numBlocks)
+			{
+	
+			}
+			if((j == pageDirectory[h(key)]) || (OFBlock && j == overflowblock))
 			{
 				cout << "new record goes into this page" << endl;
 				//Convert record into string to be added to buffer
-				string newbuffer = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id) + "$";
+				newbuffer = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id) + "$";
 				cout << "total buffer length: " << stoi(oldblock.offset)+newbuffer.length() << endl;
 				numRecords += newbuffer.length();
 				//Check if new record will fit into the block
@@ -242,6 +258,7 @@ private:
 			cout << "writing block" << endl;
 			writeBlock(temp_file, &oldblock, j);
 			cout << "writing finished" << endl;
+			//free(oldblock);
 		}
 		cout << "All blocks updated" << endl;
 		cout << "attempting to close index file" << endl;
@@ -275,17 +292,19 @@ private:
 			
 
 
-
 		// Take neccessary steps if capacity is reached
-		float capacity = numRecords/(numBlocks*4096);
-
+		float capacity = (float)numRecords/(float)(numBlocks*4096);
+		cout << "capacity: " << capacity << endl;
 		if(capacity > 0.7)
 		{
-			struct Block splitblock;
+			cout << "Capacity is over 0.7! Adding new block!!!!!!" << endl;
+			Block splitblock;
 			FILE* new_index_file = fopen("newIndex", "w+");
 			index_file = fopen(fName.c_str(), "r+");
 			temp_file = fopen("temp", "w+");
+			cout << "Add empty block to end of index file" << endl;
 			writeBlock(index_file, &newblock, nextFreePage);
+			cout << "Empty block added" << endl;
 			nextFreePage++;
 			numBlocks++;
 			if(numBlocks%((int)pow(2,i))==1)
@@ -293,10 +312,11 @@ private:
 				i++;
 			}
 
-			//Intitiallize temp file
+			//Intitiallize new_index_file file
+			cout << "Initiallizing new_index_file" << endl;
 			for(int j=0; j<nextFreePage; j++)
 			{
-				writeBlock(new_index_file, &newblock, nextFreePage);
+				writeBlock(new_index_file, &newblock, j);
 			}
 			if(fclose(new_index_file) == 0)
 			{
@@ -306,16 +326,24 @@ private:
 			{
 				cout << "index failed to close" << endl;
 			}
-
+			cout << "new_index_file initiallized" << endl;
 			
 			//Read each block
 			string rec;
 			string word;
+			
+			cout << "Reading in each block from index_file" << endl;
 			for(int j=0; j<nextFreePage; j++)
 			{
+				cout << "reading in page: " << j << endl;
+				
+				//Why does this cause memeory corruption?
 				oldblock = readBlock(index_file, j);
+				
+				cout << "page " << j << "read in" << endl;
 				//Read each record
 				stringstream buff(oldblock.buffer);
+				cout << "Reading in each record from page " << j << endl;
 				while(getline(buff, rec, '$'))
 				{
 					vector<std::string> newemp;
@@ -340,20 +368,25 @@ private:
 					OFBlock = false;
 					overflowblock = 0;
 					// new_index_file = fopen("newIndex", "w+");
-
+					key = emp.id;
+					if(h(key) >= numBlocks)
+					{
+						key = key - pow(2,i-1);
+					}
 					//Insert new record into temp_file
-					for(int j=0; j<nextFreePage; j++)
+					cout << "Inserting record into temp_file" << endl;
+					for(int k=0; k<nextFreePage; k++)
 					{
 						cout << "top of loop" << endl;
-
-						splitblock = readBlock(new_index_file, j);
+						cout << "reading in page " << k << "from new_index_file" << endl;
+						splitblock = readBlock(new_index_file, k);
 						cout << "block read in" << endl;
 						// cout << oldblock.buffer << endl;
-						if((j == pageDirectory[h(emp.id)]) || (OFBlock && j == overflowblock)) // Does not yet account for bit flip
+						if((k == pageDirectory[h(key)]) || (OFBlock && k == overflowblock)) // Does not yet account for bit flip
 						{
 							cout << "new record goes into this page" << endl;
 							//Convert record into string to be added to buffer
-							string newbuffer = to_string(emp.id) + ',' + emp.name + ',' + emp.bio + ',' + to_string(emp.manager_id) + "$";
+							newbuffer = to_string(emp.id) + ',' + emp.name + ',' + emp.bio + ',' + to_string(emp.manager_id) + "$";
 							cout << "total buffer length: " << stoi(splitblock.offset)+newbuffer.length() << endl;
 							// numRecords += newbuffer.length();
 							//Check if new record will fit into the block
@@ -417,7 +450,7 @@ private:
 							}
 						}
 						cout << "writing block" << endl;
-						writeBlock(temp_file, &splitblock, j);
+						writeBlock(temp_file, &splitblock, k);
 						cout << "writing finished" << endl;
 					}
 
@@ -450,6 +483,7 @@ private:
 					// numRecords++; //This need to be changed to be the number of bits used
 					cout << "number of records updated" << endl;
 				}
+				//free((void*)(oldblock.buffer));
 			}
 			cout << "All blocks updated" << endl;
 			cout << "attempting to close index file" << endl;
@@ -503,8 +537,9 @@ public:
 		string line, word;
 		// Record  emp;
 		bool eof = true;
-		for (int i=0; i<13; i++)
+		for (int i=0; i<14; i++)
 		{
+			cout << "Inserting record: " << i << endl;
 			if (getline(input_file, line, '\n')) {
 				vector<std::string> newemp;
 				// turn line into a stream
