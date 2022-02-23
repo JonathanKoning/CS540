@@ -103,7 +103,7 @@ private:
 		//Read block from index file and store in block
 		//Get overflow buffer
 		// fseek(index_file, blocknumber*4096, SEEK_SET);
-		index_file.seekg((blocknumber*4096), ios_base::beg);
+		index_file.seekg((blocknumber*4096), ios::beg);
 		//fread(&overflow[0], 1, 4, index_file);
 		// fread(&newblock.overflow[0], 1, 4, index_file);
 		index_file.read(&newblock.overflow[0], 4);
@@ -111,14 +111,15 @@ private:
 
 		//Get buffer size
 		// fseek(index_file, (blocknumber*4096)+4092, SEEK_SET);
-		index_file.seekg(((blocknumber*4096)+4092), ios_base::beg);
-
-		//fread(&offset[0], 1, 4, index_file);
+		index_file.seekg(((blocknumber*4096)+4092), ios::beg);
 		// fread(&newblock.offset[0], 1, 4, index_file);
-		index_file.read(&newblock.offset[0], 4);
+		// fread(&newblock.offset[0], 1, 4, index_file);
+		char* offset = new char [4];
+		// index_file.read(&newblock.offset[0], 4);
+		index_file.read(offset, 4);
 		for(int l=0; l<4; l++)
 		{
-			cout << newblock.offset[l] << endl;
+			cout << offset[l] << endl;
 		}
 		cout << "offset: " << newblock.offset << endl;
 		buffersize = stoi(newblock.offset);
@@ -248,7 +249,7 @@ private:
 		cout << "//////////////////Insert New Record////////////////" << endl;
 		// Add record to the index in the correct block, creating overflow block if necessary
 		// index_file = fopen(fName.c_str(), "r+");
-		index_file.open(fName, ios::app);
+		index_file.open(fName, ios::binary);
 		// temp_file = fopen("temp", "w+");
 		temp_file.open("temp", ios::out | ios::in);
 		bool OFBlock = false;
