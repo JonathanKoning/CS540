@@ -49,13 +49,13 @@ private:
 	string fName;
 	void writeBlock(FILE* temp_file, Block* block, int blocknumber)
 	{
-		cout << "writeBlock: " << blocknumber << endl;
+		// cout << "writeBlock: " << blocknumber << endl;
 		
 		// Write overflow
 		fseek(temp_file, blocknumber*4096, SEEK_SET);
-		cout << ftell(temp_file) << endl;
+		// cout << ftell(temp_file) << endl;
 		fputs(block->overflow.c_str(), temp_file);
-		cout << ftell(temp_file) << endl;
+		// cout << ftell(temp_file) << endl;
 		
 		// Write buffer
 		fseek(temp_file, ((blocknumber*4096)+4), SEEK_SET);
@@ -79,7 +79,7 @@ private:
 
 	Block readBlock(FILE* index_file, int blocknumber)
 	{
-		cout << "readBlock: " << blocknumber << endl;
+		// cout << "readBlock: " << blocknumber << endl;
 		Block newblock;
 		//cout << "newblock initiallized" << endl;
 		
@@ -125,14 +125,14 @@ private:
 		//cout << "newblock offset allocated" << endl;
 		// cout << "newblock offset set" << endl;
 
-		cout << "returning new block" << endl;
+		// cout << "returning new block" << endl;
 		return newblock;
 	}
 	void readBlock2(FILE* index_file, Block* newblock, int blocknumber)
 	{
-		cout << "readBlock: " << blocknumber << endl;
+		// cout << "readBlock: " << blocknumber << endl;
 		//Block newblock;
-		cout << "newblock initiallized" << endl;
+		// cout << "newblock initiallized" << endl;
 		
 		string overflow;
 		string buffer;
@@ -182,7 +182,7 @@ private:
 
 	int h(int id)
 	{
-		cout << "h(x)" << endl;
+		// cout << "h(x)" << endl;
 		return (id % int(pow(2.0, 16.0))) % int(pow(2,i));
 	}
 
@@ -233,11 +233,11 @@ private:
 		}
 		for(int j=0; j<nextFreePage; j++)
 		{
-			cout << "top of loop" << endl;
+			// cout << "top of loop" << endl;
 			
 			//oldblock = readBlock(index_file, j);
 			readBlock2(index_file, &oldblock, j);
-			cout << "block read in" << endl;
+			// cout << "block read in" << endl;
 			// cout << oldblock.buffer << endl;
 
 			if(h(record.id) > numBlocks)
@@ -246,7 +246,7 @@ private:
 			}
 			if((j == pageDirectory[h(key)]) || (OFBlock && j == overflowblock))
 			{
-				cout << "new record goes into this page" << endl;
+				// cout << "new record goes into this page" << endl;
 				//Convert record into string to be added to buffer
 				/*cout << "record.id: " << record.id << endl;
 				cout << "record.manager_id: " << record.manager_id << endl;
@@ -256,40 +256,40 @@ private:
 				cout << "to_string(record.manager_id): " << to_string(record.manager_id) << endl;
 				*/
 				string newbuffer = to_string(record.id);
-				cout << "record.id added to newbuffer" << endl;
+				// cout << "record.id added to newbuffer" << endl;
 				newbuffer += ",";
 				newbuffer += record.name;
-				cout << "record.name added to newbuffer" << endl;
+				// cout << "record.name added to newbuffer" << endl;
 				newbuffer += ",";
 				newbuffer += record.bio;
-				cout << "record.bio added to newbuffer" << endl;
-				cout << "adding ',' after record.bio" << endl;
+				// cout << "record.bio added to newbuffer" << endl;
+				// cout << "adding ',' after record.bio" << endl;
 				newbuffer += ",";
-				cout << "to_string(record.manager_id): " << to_string(record.manager_id) << endl;
+				// cout << "to_string(record.manager_id): " << to_string(record.manager_id) << endl;
 				newbuffer += to_string(record.manager_id);
-				cout << "record.manager_id added to newbuffer" << endl;
+				// cout << "record.manager_id added to newbuffer" << endl;
 				newbuffer += "$";
 				//newbuffer = to_string(record.id) + "," + record.name + "," + record.bio + "," + to_string(record.manager_id) + "$";
-				cout << "new buffer created" << endl;
+				// cout << "new buffer created" << endl;
 
 				//newbuffer += newbuffer2;
-				cout << "oldblock.offset: " << oldblock.offset << endl;
-				cout << "total buffer length: " << stoi(oldblock.offset)+newbuffer.length() << endl;
+				// cout << "oldblock.offset: " << oldblock.offset << endl;
+				// cout << "total buffer length: " << stoi(oldblock.offset)+newbuffer.length() << endl;
 				numRecords += newbuffer.length();
 				//Check if new record will fit into the block
 				if(stoi(oldblock.offset)+newbuffer.length() > 4088)
 				{
-					cout << "Overflow block needed" << endl;
+					// cout << "Overflow block needed" << endl;
 					//Check if current block has overflow block
 					if(oldblock.overflow != "0000")
 					{
-						cout << "block has overflowblock" << endl;
+						// cout << "block has overflowblock" << endl;
 						OFBlock = true;
 						overflowblock = stoi(oldblock.overflow);
 					}
 					else //Create an overflow block
 					{
-						cout << "create overflowblock" << endl;
+						// cout << "create overflowblock" << endl;
 						if(nextFreePage < 10)
 						{
 							oldblock.overflow = "000" + to_string(nextFreePage);
@@ -306,7 +306,7 @@ private:
 						{
 							oldblock.overflow = to_string(nextFreePage);
 						}
-						cout << "Write overflowblock" << endl;
+						// cout << "Write overflowblock" << endl;
 						writeBlock(index_file, &newblock, nextFreePage);
 						nextFreePage++;
 					}
@@ -326,9 +326,9 @@ private:
 					else if(newoffset < 1000)
 					{
 						oldblock.offset = "0" + to_string(newoffset);
-						cout << newoffset << endl;
-						cout << to_string(newoffset) << endl;
-						cout << oldblock.offset << endl;
+						// cout << newoffset << endl;
+						// cout << to_string(newoffset) << endl;
+						// cout << oldblock.offset << endl;
 					}
 					else
 					{
@@ -336,13 +336,13 @@ private:
 					}
 				}
 			}
-			cout << "writing block" << endl;
+			// cout << "writing block" << endl;
 			writeBlock(temp_file, &oldblock, j);
-			cout << "writing finished" << endl;
+			// cout << "writing finished" << endl;
 			//free(oldblock);
 		}
-		cout << "All blocks updated" << endl;
-		cout << "attempting to close index file" << endl;
+		// cout << "All blocks updated" << endl;
+		// cout << "attempting to close index file" << endl;
 		if(fclose(index_file) == 0)
 		{
 			cout << "index closed" << endl;
@@ -354,9 +354,9 @@ private:
 		
 		
 		remove(fName.c_str());
-		cout << "EmployeeIndex removed" << endl;
+		// cout << "EmployeeIndex removed" << endl;
 		
-		cout << "attempting to close temp file" << endl;
+		// cout << "attempting to close temp file" << endl;
 		if(fclose(temp_file) == 0)
 		{
 			cout << "temp closed" << endl;
@@ -365,11 +365,11 @@ private:
 		{
 			cout << "temp failed to close" << endl;
 		}
-		cout << "both files closed" << endl;
+		// cout << "both files closed" << endl;
 		rename("temp", fName.c_str());
-		cout << "temp renamed to EmployeeIndex" << endl;
+		// cout << "temp renamed to EmployeeIndex" << endl;
 		// numRecords++; //This need to be changed to be the number of bits used
-		cout << "number of records updated" << endl;
+		// cout << "number of records updated" << endl;
 			
 
 
@@ -524,9 +524,9 @@ private:
 								else if(newoffset < 1000)
 								{
 									splitblock.offset = "0" + to_string(newoffset);
-									cout << newoffset << endl;
-									cout << to_string(newoffset) << endl;
-									cout << splitblock.offset << endl;
+									// cout << newoffset << endl;
+									// cout << to_string(newoffset) << endl;
+									// cout << splitblock.offset << endl;
 								}
 								else
 								{
