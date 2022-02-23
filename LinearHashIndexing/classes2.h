@@ -621,9 +621,9 @@ public:
 		string line, word;
 		// Record  emp;
 		bool eof = true;
-		for (int i=0; i<14; i++)
+		while (eof)
 		{
-			cout << "Inserting record: " << i << endl;
+			// cout << "Inserting record: " << i << endl;
 			if (getline(input_file, line, '\n')) {
 				vector<std::string> newemp;
 				// turn line into a stream
