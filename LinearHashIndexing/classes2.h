@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <stdio.h>
 #include <sstream>
 #include <bitset>
 using namespace std;
@@ -603,6 +604,59 @@ private:
 
 		
     }
+	Record findrecord(int id)
+	{
+		FILE* index_file;
+		index_file = fopen(fName.c_str(), "r+");
+		int key = id;
+		if(h(key) >= numBlocks)
+		{
+			key = key - pow(2,i-1);
+		}
+		Block block;
+		readBlock2(index_file, &block, pageDirectory[h(key)]);
+		string rec;
+		string word;
+		while(true)
+		{
+			stringstream buff(block.buffer);
+			while(getline(buff, rec, '$'))
+			{
+				vector<std::string> newemp;
+				stringstream s(rec);
+				//Get id
+				getline(s, word,',');
+				newemp.push_back(word);
+				//get name
+				getline(s, word,',');
+				newemp.push_back(word);
+				//get bio
+				getline(s, word, ',');
+				newemp.push_back(word);
+				//get manager_id
+				getline(s, word, ',');
+				newemp.push_back(word);
+	
+				Record emp(newemp);
+				if(emp.id == id)
+				{
+					return emp;
+				}
+			}
+			if(block.overflow == "0000")
+			{
+				vector<std::string> newemp;
+				newemp.push_back("");
+				newemp.push_back("");
+				newemp.push_back("");
+				newemp.push_back("");
+				Record emp(newemp);
+				return emp;
+			}
+
+			readBlock2(index_file, &block, stoi(block.overflow));
+		}
+	}
 
 public:
     LinearHashIndex(string indexFileName) {
@@ -653,7 +707,7 @@ public:
     }
 
     // Given an ID, find the relevant record and print it
-    // Record findRecordById(int id) {
-        
-    // }
+	Record findRecordById(int id) {
+		
+	}
 };
