@@ -47,39 +47,50 @@ private:
     int nextFreePage; // Next page to write to
 	int block_size;
 	string fName;
-	void writeBlock(FILE* temp_file, Block* block, int blocknumber)
+	// void writeBlock(FILE* temp_file, Block* block, int blocknumber)
+	void writeBlock(fstream& temp_file, Block* block, int blocknumber)
 	{
 		// cout << "writeBlock: " << blocknumber << endl;
-		
+		block->overflow.resize(4);
+		block->offset.resize(4);
 		// Write overflow
-		fseek(temp_file, blocknumber*4096, SEEK_SET);
+		//fseek(temp_file, blocknumber*4096, SEEK_SET);
+		
 		// cout << ftell(temp_file) << endl;
-		fputs(block->overflow.c_str(), temp_file);
+		// fputs(block->overflow.c_str(), temp_file);
+		temp_file.seekg(blocknumber*4096, ios_base::beg);
+		temp_file.write(block->overflow.c_str(), sizeof(block->overflow.c_str()));
 		// cout << ftell(temp_file) << endl;
 		
 		// Write buffer
-		fseek(temp_file, ((blocknumber*4096)+4), SEEK_SET);
+		// fseek(temp_file, ((blocknumber*4096)+4), SEEK_SET);
+		temp_file.seekg(((blocknumber*4096)+4), ios_base::beg);
 		//cout << "Move to start of buffer: " << ftell(temp_file) << endl;
 		// int puts = fputs(buff_arr, temp_file);
-		int puts = fputs(block->buffer.c_str(), temp_file);
+		// int puts = fputs(block->buffer.c_str(), temp_file);
+		temp_file.write(block->buffer.c_str(), sizeof(block->buffer.c_str()));
 		// cout << "buffer: " << block.buffer << endl;
-		// cout << "buffer.c_str: " << (block->buffer).c_str() << endl;
+		cout << "buffer.c_str: " << (block->buffer).c_str() << endl;
 
 		//cout << "puts: " << puts << endl;
 		//cout << "Buffer written: " << ftell(temp_file) << endl;
 		
 		// Write offset
-		fseek(temp_file, ((blocknumber*4096)+4092), SEEK_SET);
+		// fseek(temp_file, ((blocknumber*4096)+4092), SEEK_SET);
+		temp_file.seekg(((blocknumber*4096)+4092), ios_base::beg);
 		//cout << "Move to start of offset: " << ftell(temp_file) << endl;
-		fputs(block->offset.c_str(), temp_file);
+		// fputs(block->offset.c_str(), temp_file);
+		temp_file.write(block->offset.c_str(), sizeof(block->offset.c_str())-4);
+		cout << "sizeof block->offset: " << sizeof(block->offset.c_str()) << endl;
 		// fputs("0000", temp_file);
 		//cout << "offset written: " << ftell(temp_file) << endl;
 	}
 
 
-	Block readBlock(FILE* index_file, int blocknumber)
+	// Block readBlock(FILE* index_file, int blocknumber)
+	Block readBlock(fstream& index_file, int blocknumber)
 	{
-		// cout << "readBlock: " << blocknumber << endl;
+		cout << "readBlock: " << blocknumber << endl;
 		Block newblock;
 		//cout << "newblock initiallized" << endl;
 		
@@ -91,25 +102,35 @@ private:
 		newblock.offset.resize(4);
 		//Read block from index file and store in block
 		//Get overflow buffer
-		fseek(index_file, blocknumber*4096, SEEK_SET);
+		// fseek(index_file, blocknumber*4096, SEEK_SET);
+		index_file.seekg((blocknumber*4096), ios_base::beg);
 		//fread(&overflow[0], 1, 4, index_file);
-		fread(&newblock.overflow[0], 1, 4, index_file);
-		
+		// fread(&newblock.overflow[0], 1, 4, index_file);
+		index_file.read(&newblock.overflow[0], 4);
 		// cout << "overflow: " << overflow << endl;
 
 		//Get buffer size
-		fseek(index_file, (blocknumber*4096)+4092, SEEK_SET);
+		// fseek(index_file, (blocknumber*4096)+4092, SEEK_SET);
+		index_file.seekg(((blocknumber*4096)+4092), ios_base::beg);
+
 		//fread(&offset[0], 1, 4, index_file);
-		fread(&newblock.offset[0], 1, 4, index_file);
-		// cout << "offset: " << offset << endl;
+		// fread(&newblock.offset[0], 1, 4, index_file);
+		index_file.read(&newblock.offset[0], 4);
+		for(int l=0; l<4; l++)
+		{
+			cout << newblock.offset[l] << endl;
+		}
+		cout << "offset: " << newblock.offset << endl;
 		buffersize = stoi(newblock.offset);
-		//cout << "buffersize: " << buffersize << endl;
+		cout << "buffersize: " << buffersize << endl;
 		//cout << "newblock.offset: " << newblock.offset << endl;
 		//Get buffer
 		newblock.buffer.resize(buffersize-4);
 		
-		fseek(index_file, (blocknumber*4096)+4, SEEK_SET);
-		fread(&newblock.buffer[0], 1, buffersize, index_file);
+		// fseek(index_file, (blocknumber*4096)+4, SEEK_SET);
+		index_file.seekg(((blocknumber*4096)+4), ios_base::beg);
+		// fread(&newblock.buffer[0], 1, buffersize, index_file);
+		index_file.read(&newblock.overflow[0], buffersize);
 		//cout << "newblock buffer read in" << endl;
 		//cout << newblock.buffer << endl;
 		// cout << "buffer: " << buffer[buffersize-5] << endl;
@@ -146,7 +167,7 @@ private:
 		//fread(&overflow[0], 1, 4, index_file);
 		fread(&overflow[0], 1, 4, index_file);
 		
-		// cout << "overflow: " << overflow << endl;
+		cout << "overflow: " << overflow << endl;
 
 		//Get buffer size
 		fseek(index_file, (blocknumber*4096)+4092, SEEK_SET);
@@ -189,8 +210,10 @@ private:
 
     // Insert new record into index
     void insertRecord(Record record) {
-		FILE* index_file; 
-		FILE* temp_file;
+		// FILE* index_file;
+		// FILE* temp_file;
+		fstream index_file;
+		fstream temp_file;
 		Block newblock;
 		Block oldblock;
 		
@@ -204,25 +227,30 @@ private:
 			numBlocks = 2;
 			nextFreePage = 2;
 
-			index_file = fopen(fName.c_str(), "w+");
+			// index_file = fopen(fName.c_str(), "w+");
+			index_file.open(fName, ios::out);
 			//Write 2 empty blocks to the file
 			writeBlock(index_file, &newblock, 0);
 			pageDirectory.push_back(0);
 			writeBlock(index_file, &newblock, 1);
 			pageDirectory.push_back(1);
-			if(fclose(index_file) == 0)
-			{
-				cout << "index closed" << endl;
-			}
-			else
-			{
-				cout << "index failed to close" << endl;
-			}
+			index_file.close();
+			// if(fclose(index_file) == 0)
+			// {
+			// 	cout << "index closed" << endl;
+			// }
+			// else
+			// {
+			// 	cout << "index failed to close" << endl;
+			// }
+			// exit(0);
         }
 		cout << "//////////////////Insert New Record////////////////" << endl;
 		// Add record to the index in the correct block, creating overflow block if necessary
-		index_file = fopen(fName.c_str(), "r+");
-		temp_file = fopen("temp", "w+");
+		// index_file = fopen(fName.c_str(), "r+");
+		index_file.open(fName, ios::app);
+		// temp_file = fopen("temp", "w+");
+		temp_file.open("temp", ios::out | ios::in);
 		bool OFBlock = false;
 		int overflowblock = 0;
 		int key = record.id;
@@ -233,17 +261,14 @@ private:
 		}
 		for(int j=0; j<nextFreePage; j++)
 		{
-			// cout << "top of loop" << endl;
+			cout << "top of loop" << endl;
 			
-			//oldblock = readBlock(index_file, j);
-			readBlock2(index_file, &oldblock, j);
+			oldblock = readBlock(index_file, j);
+			// readBlock2(index_file, &oldblock, j);
 			// cout << "block read in" << endl;
 			// cout << oldblock.buffer << endl;
 
-			if(h(record.id) > numBlocks)
-			{
-	
-			}
+			
 			if((j == pageDirectory[h(key)]) || (OFBlock && j == overflowblock))
 			{
 				// cout << "new record goes into this page" << endl;
@@ -343,28 +368,30 @@ private:
 		}
 		// cout << "All blocks updated" << endl;
 		// cout << "attempting to close index file" << endl;
-		if(fclose(index_file) == 0)
-		{
-			cout << "index closed" << endl;
-		}
-		else
-		{
-			cout << "index failed to close" << endl;
-		}
+		index_file.close();
+		// if(fclose(index_file) == 0)
+		// {
+		// 	cout << "index closed" << endl;
+		// }
+		// else
+		// {
+		// 	cout << "index failed to close" << endl;
+		// }
 		
 		
 		remove(fName.c_str());
 		// cout << "EmployeeIndex removed" << endl;
 		
 		// cout << "attempting to close temp file" << endl;
-		if(fclose(temp_file) == 0)
-		{
-			cout << "temp closed" << endl;
-		}
-		else
-		{
-			cout << "temp failed to close" << endl;
-		}
+		temp_file.close();
+		// if(fclose(temp_file) == 0)
+		// {
+		// 	cout << "temp closed" << endl;
+		// }
+		// else
+		// {
+		// 	cout << "temp failed to close" << endl;
+		// }
 		// cout << "both files closed" << endl;
 		rename("temp", fName.c_str());
 		// cout << "temp renamed to EmployeeIndex" << endl;
@@ -380,9 +407,13 @@ private:
 		{
 			cout << "Capacity is over 0.7! Adding new block!!!!!!" << endl;
 			Block splitblock;
-			FILE* new_index_file = fopen("newIndex", "w+");
-			index_file = fopen(fName.c_str(), "r+");
-			temp_file = fopen("temp", "w+");
+			// FILE* new_index_file = fopen("newIndex", "w+");
+			fstream new_index_file;
+			new_index_file.open("newIndex", ios::out);
+			// index_file = fopen(fName.c_str(), "r+");
+			index_file.open(fName, ios::trunc);
+			// temp_file = fopen("temp", "w+");
+			temp_file.open("temp", ios::out);
 			cout << "Add empty block to end of index file" << endl;
 			writeBlock(index_file, &newblock, nextFreePage);
 			cout << "Empty block added" << endl;
@@ -399,14 +430,15 @@ private:
 			{
 				writeBlock(new_index_file, &newblock, j);
 			}
-			if(fclose(new_index_file) == 0)
-			{
-				cout << "index closed" << endl;
-			}
-			else
-			{
-				cout << "index failed to close" << endl;
-			}
+			new_index_file.close();
+			// if(fclose(new_index_file) == 0)
+			// {
+			// 	cout << "index closed" << endl;
+			// }
+			// else
+			// {
+			// 	cout << "index failed to close" << endl;
+			// }
 			cout << "new_index_file initiallized" << endl;
 			
 			//Read each block
@@ -420,8 +452,8 @@ private:
 				cout << "reading in page: " << j << endl;
 				
 				//Why does this cause memeory corruption?
-				//oldblock = readBlock(index_file, j);
-				readBlock2(index_file, &oldblock, j);
+				oldblock = readBlock(index_file, j);
+				// readBlock2(index_file, &oldblock, j);
 				cout << "page " << j << " read in" << endl;
 				//Read each record
 				stringstream buff(oldblock.buffer);
@@ -445,8 +477,10 @@ private:
 
 					Record emp(newemp);
 
-					new_index_file = fopen("newIndex", "r+");
-					temp_file = fopen("temp", "w+");
+					// new_index_file = fopen("newIndex", "r+");
+					new_index_file.open("newIndex", ios::out);
+					// temp_file = fopen("temp", "w+");
+					temp_file.open("temp", ios::in);
 					OFBlock = false;
 					overflowblock = 0;
 					// new_index_file = fopen("newIndex", "w+");
@@ -462,8 +496,8 @@ private:
 						//cout << "top of loop" << endl;
 						cout << "reading in page " << k << " from new_index_file" << endl;
 						cout << "Splitblock" << endl;
-						//splitblock = readBlock(new_index_file, k);
-						readBlock2(new_index_file, &splitblock, k);
+						splitblock = readBlock(new_index_file, k);
+						// readBlock2(new_index_file, &splitblock, k);
 						cout << "block read in" << endl;
 						// cout << oldblock.buffer << endl;
 						if((k == pageDirectory[h(key)]) || (OFBlock && k == overflowblock)) // Does not yet account for bit flip
@@ -540,28 +574,30 @@ private:
 					}
 
 					cout << "attempting to close new_index_file" << endl;
-					if(fclose(new_index_file) == 0)
-					{
-						cout << "new index closed" << endl;
-					}
-					else
-					{
-						cout << "new index failed to close" << endl;
-					}
+					
+					// if(fclose(new_index_file) == 0)
+					// {
+					// 	cout << "new index closed" << endl;
+					// }
+					// else
+					// {
+					// 	cout << "new index failed to close" << endl;
+					// }
 
 
 					remove("newIndex");
 					cout << "new index removed" << endl;
 
 					cout << "attempting to close temp file" << endl;
-					if(fclose(temp_file) == 0)
-					{
-						cout << "temp closed" << endl;
-					}
-					else
-					{
-						cout << "temp failed to close" << endl;
-					}
+					temp_file.close();
+					// if(fclose(temp_file) == 0)
+					// {
+					// 	cout << "temp closed" << endl;
+					// }
+					// else
+					// {
+					// 	cout << "temp failed to close" << endl;
+					// }
 					cout << "both files closed" << endl;
 					rename("temp", "newIndex");
 					cout << "temp renamed to newIndex" << endl;
@@ -571,14 +607,15 @@ private:
 			}
 			cout << "All blocks updated" << endl;
 			cout << "attempting to close index file" << endl;
-			if(fclose(index_file) == 0)
-			{
-				cout << "index closed" << endl;
-			}
-			else
-			{
-				cout << "index failed to close" << endl;
-			}
+			index_file.close();
+			// if(fclose(index_file) == 0)
+			// {
+			// 	cout << "index closed" << endl;
+			// }
+			// else
+			// {
+			// 	cout << "index failed to close" << endl;
+			// }
 
 
 			remove(fName.c_str());
