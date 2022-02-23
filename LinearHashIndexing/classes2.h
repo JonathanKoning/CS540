@@ -59,21 +59,21 @@ private:
 		
 		// Write buffer
 		fseek(temp_file, ((blocknumber*4096)+4), SEEK_SET);
-		cout << "Move to start of buffer: " << ftell(temp_file) << endl;
+		//cout << "Move to start of buffer: " << ftell(temp_file) << endl;
 		// int puts = fputs(buff_arr, temp_file);
 		int puts = fputs(block->buffer.c_str(), temp_file);
 		// cout << "buffer: " << block.buffer << endl;
 		// cout << "buffer.c_str: " << (block->buffer).c_str() << endl;
 
-		cout << "puts: " << puts << endl;
-		cout << "Buffer written: " << ftell(temp_file) << endl;
+		//cout << "puts: " << puts << endl;
+		//cout << "Buffer written: " << ftell(temp_file) << endl;
 		
 		// Write offset
 		fseek(temp_file, ((blocknumber*4096)+4092), SEEK_SET);
-		cout << "Move to start of offset: " << ftell(temp_file) << endl;
+		//cout << "Move to start of offset: " << ftell(temp_file) << endl;
 		fputs(block->offset.c_str(), temp_file);
 		// fputs("0000", temp_file);
-		cout << "offset written: " << ftell(temp_file) << endl;
+		//cout << "offset written: " << ftell(temp_file) << endl;
 	}
 
 
@@ -81,6 +81,57 @@ private:
 	{
 		cout << "readBlock: " << blocknumber << endl;
 		Block newblock;
+		//cout << "newblock initiallized" << endl;
+		
+		//string overflow;
+		//string buffer;
+		//string offset;
+		int buffersize;
+		newblock.overflow.resize(4);
+		newblock.offset.resize(4);
+		//Read block from index file and store in block
+		//Get overflow buffer
+		fseek(index_file, blocknumber*4096, SEEK_SET);
+		//fread(&overflow[0], 1, 4, index_file);
+		fread(&newblock.overflow[0], 1, 4, index_file);
+		
+		// cout << "overflow: " << overflow << endl;
+
+		//Get buffer size
+		fseek(index_file, (blocknumber*4096)+4092, SEEK_SET);
+		//fread(&offset[0], 1, 4, index_file);
+		fread(&newblock.offset[0], 1, 4, index_file);
+		// cout << "offset: " << offset << endl;
+		buffersize = stoi(newblock.offset);
+		//cout << "buffersize: " << buffersize << endl;
+		//cout << "newblock.offset: " << newblock.offset << endl;
+		//Get buffer
+		newblock.buffer.resize(buffersize-4);
+		
+		fseek(index_file, (blocknumber*4096)+4, SEEK_SET);
+		fread(&newblock.buffer[0], 1, buffersize, index_file);
+		//cout << "newblock buffer read in" << endl;
+		//cout << newblock.buffer << endl;
+		// cout << "buffer: " << buffer[buffersize-5] << endl;
+
+		// struct Block newblock;
+		// cout << "newblock allocated" << endl;
+		//newblock.overflow = overflow;
+		//cout << "newblock overflow allocated" << endl;
+		// cout << "newblock overflow set" << endl;
+		// newblock.buffer = buffer;
+		// cout << "newblock buffer set" << endl;
+		//newblock.offset = offset;
+		//cout << "newblock offset allocated" << endl;
+		// cout << "newblock offset set" << endl;
+
+		cout << "returning new block" << endl;
+		return newblock;
+	}
+	void readBlock2(FILE* index_file, Block* newblock, int blocknumber)
+	{
+		cout << "readBlock: " << blocknumber << endl;
+		//Block newblock;
 		cout << "newblock initiallized" << endl;
 		
 		string overflow;
@@ -92,37 +143,41 @@ private:
 		//Read block from index file and store in block
 		//Get overflow buffer
 		fseek(index_file, blocknumber*4096, SEEK_SET);
+		//fread(&overflow[0], 1, 4, index_file);
 		fread(&overflow[0], 1, 4, index_file);
+		
 		// cout << "overflow: " << overflow << endl;
 
 		//Get buffer size
 		fseek(index_file, (blocknumber*4096)+4092, SEEK_SET);
+		//fread(&offset[0], 1, 4, index_file);
 		fread(&offset[0], 1, 4, index_file);
 		// cout << "offset: " << offset << endl;
 		buffersize = stoi(offset);
-		// cout << "buffersize: " << buffersize << endl;
-		
+		//cout << "buffersize: " << buffersize << endl;
+		//cout << "newblock.offset: " << newblock->offset << endl;
 		//Get buffer
-		newblock.buffer.resize(buffersize-4);
+		newblock->buffer.resize(buffersize-4);
 		
 		fseek(index_file, (blocknumber*4096)+4, SEEK_SET);
-		fread(&newblock.buffer[0], 1, buffersize, index_file);
-		cout << "newblock buffer read in" << endl;
+		fread(&newblock->buffer[0], 1, buffersize, index_file);
+		//cout << "newblock buffer read in" << endl;
+		//cout << newblock->buffer << endl;
 		// cout << "buffer: " << buffer[buffersize-5] << endl;
 
 		// struct Block newblock;
 		// cout << "newblock allocated" << endl;
-		newblock.overflow = overflow;
-		cout << "newblock overflow allocated" << endl;
+		newblock->overflow = overflow;
+		//cout << "newblock overflow allocated" << endl;
 		// cout << "newblock overflow set" << endl;
 		// newblock.buffer = buffer;
 		// cout << "newblock buffer set" << endl;
-		newblock.offset = offset;
-		cout << "newblock offset allocated" << endl;
+		newblock->offset = offset;
+		//cout << "newblock offset allocated" << endl;
 		// cout << "newblock offset set" << endl;
 
-		cout << "returning new block" << endl;
-		return newblock;
+		//cout << "returning new block" << endl;
+		//return newblock;
 	}
 
 	int h(int id)
@@ -171,7 +226,7 @@ private:
 		bool OFBlock = false;
 		int overflowblock = 0;
 		int key = record.id;
-		string newbuffer;
+		//string newbuffer;
 		if(h(key) >= numBlocks)
 		{
 			key = key - pow(2, i-1);
@@ -180,7 +235,8 @@ private:
 		{
 			cout << "top of loop" << endl;
 			
-			oldblock = readBlock(index_file, j);
+			//oldblock = readBlock(index_file, j);
+			readBlock2(index_file, &oldblock, j);
 			cout << "block read in" << endl;
 			// cout << oldblock.buffer << endl;
 
@@ -192,7 +248,32 @@ private:
 			{
 				cout << "new record goes into this page" << endl;
 				//Convert record into string to be added to buffer
-				newbuffer = to_string(record.id) + ',' + record.name + ',' + record.bio + ',' + to_string(record.manager_id) + "$";
+				/*cout << "record.id: " << record.id << endl;
+				cout << "record.manager_id: " << record.manager_id << endl;
+				cout << "record.name : " << record.name << endl;
+				cout << "record.bio: " << record.bio << endl;
+				cout << "to_string(record.id): " << to_string(record.id) << endl;
+				cout << "to_string(record.manager_id): " << to_string(record.manager_id) << endl;
+				*/
+				string newbuffer = to_string(record.id);
+				cout << "record.id added to newbuffer" << endl;
+				newbuffer += ",";
+				newbuffer += record.name;
+				cout << "record.name added to newbuffer" << endl;
+				newbuffer += ",";
+				newbuffer += record.bio;
+				cout << "record.bio added to newbuffer" << endl;
+				cout << "adding ',' after record.bio" << endl;
+				newbuffer += ",";
+				cout << "to_string(record.manager_id): " << to_string(record.manager_id) << endl;
+				newbuffer += to_string(record.manager_id);
+				cout << "record.manager_id added to newbuffer" << endl;
+				newbuffer += "$";
+				//newbuffer = to_string(record.id) + "," + record.name + "," + record.bio + "," + to_string(record.manager_id) + "$";
+				cout << "new buffer created" << endl;
+
+				//newbuffer += newbuffer2;
+				cout << "oldblock.offset: " << oldblock.offset << endl;
 				cout << "total buffer length: " << stoi(oldblock.offset)+newbuffer.length() << endl;
 				numRecords += newbuffer.length();
 				//Check if new record will fit into the block
@@ -332,15 +413,16 @@ private:
 			string rec;
 			string word;
 			
-			cout << "Reading in each block from index_file" << endl;
-			for(int j=0; j<nextFreePage; j++)
+			cout << "/////////////Reading in each block from index_file///////////////////////////" << endl;
+			int indexpages = nextFreePage;
+			for(int j=0; j<indexpages; j++)
 			{
 				cout << "reading in page: " << j << endl;
 				
 				//Why does this cause memeory corruption?
-				oldblock = readBlock(index_file, j);
-				
-				cout << "page " << j << "read in" << endl;
+				//oldblock = readBlock(index_file, j);
+				readBlock2(index_file, &oldblock, j);
+				cout << "page " << j << " read in" << endl;
 				//Read each record
 				stringstream buff(oldblock.buffer);
 				cout << "Reading in each record from page " << j << endl;
@@ -377,17 +459,19 @@ private:
 					cout << "Inserting record into temp_file" << endl;
 					for(int k=0; k<nextFreePage; k++)
 					{
-						cout << "top of loop" << endl;
-						cout << "reading in page " << k << "from new_index_file" << endl;
-						splitblock = readBlock(new_index_file, k);
+						//cout << "top of loop" << endl;
+						cout << "reading in page " << k << " from new_index_file" << endl;
+						cout << "Splitblock" << endl;
+						//splitblock = readBlock(new_index_file, k);
+						readBlock2(new_index_file, &splitblock, k);
 						cout << "block read in" << endl;
 						// cout << oldblock.buffer << endl;
 						if((k == pageDirectory[h(key)]) || (OFBlock && k == overflowblock)) // Does not yet account for bit flip
 						{
-							cout << "new record goes into this page" << endl;
+							cout << "/////////////new record goes into page " << k <<  "///////////////////////" << endl;
 							//Convert record into string to be added to buffer
-							newbuffer = to_string(emp.id) + ',' + emp.name + ',' + emp.bio + ',' + to_string(emp.manager_id) + "$";
-							cout << "total buffer length: " << stoi(splitblock.offset)+newbuffer.length() << endl;
+							string newbuffer = to_string(emp.id) + ',' + emp.name + ',' + emp.bio + ',' + to_string(emp.manager_id) + "$";
+							//cout << "total buffer length: " << stoi(splitblock.offset)+newbuffer.length() << endl;
 							// numRecords += newbuffer.length();
 							//Check if new record will fit into the block
 							if(stoi(splitblock.offset)+newbuffer.length() > 4088)
@@ -420,7 +504,8 @@ private:
 										splitblock.overflow = to_string(nextFreePage);
 									}
 									cout << "Write overflowblock" << endl;
-									writeBlock(index_file, &newblock, nextFreePage);
+									//writeBlock(index_file, &newblock, nextFreePage);
+									writeBlock(new_index_file, &newblock, nextFreePage);
 									nextFreePage++;
 								}
 							}
@@ -449,7 +534,7 @@ private:
 								}
 							}
 						}
-						cout << "writing block" << endl;
+						cout << "writing block to temp file" << endl;
 						writeBlock(temp_file, &splitblock, k);
 						cout << "writing finished" << endl;
 					}
@@ -481,9 +566,8 @@ private:
 					rename("temp", "newIndex");
 					cout << "temp renamed to newIndex" << endl;
 					// numRecords++; //This need to be changed to be the number of bits used
-					cout << "number of records updated" << endl;
+					//cout << "number of records updated" << endl;
 				}
-				//free((void*)(oldblock.buffer));
 			}
 			cout << "All blocks updated" << endl;
 			cout << "attempting to close index file" << endl;
