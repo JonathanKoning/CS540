@@ -708,6 +708,6 @@ public:
 
     // Given an ID, find the relevant record and print it
 	Record findRecordById(int id) {
-		
+		return findrecord(id);
 	}
 };
